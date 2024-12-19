@@ -65,11 +65,46 @@ bumps = [(3,1),(4,1),(5,2),(5,3),(2,4),(3,4)] #Difficult terrain points as list 
 ## ROS2 Setup
 
 rclpy.init()
-node = rclpy.create_node('drone_pose_publisher')
+node = rclpy.create_node('simulation_node')
 pose_publisher = node.create_publisher(AgentPoses, 'drone_poses', 10)
 
 # Listener for /robot1/replanning_response 
 # Prefix + suffix
+global new_prefix_actions, new_suffix_actions, prefix_actions, suffix_actions
+new_prefix_actions = []
+new_suffix_actions = []
+prefix_actions = []
+suffix_actions = []
+
+# RelayResponse callback
+def relay_response_callback(msg):
+    global new_prefix_actions, new_suffix_actions
+    new_prefix_actions = msg.new_plan_prefix.action_sequence
+    new_suffix_actions = msg.new_plan_suffix.action_sequence
+    node.get_logger().info(f"Received prefix actions: {new_prefix_actions}")
+    node.get_logger().info(f"Received suffix actions: {new_suffix_actions}")
+
+# PrefixPlan callback
+def prefix_plan_callback(msg):
+    global prefix_actions
+    prefix_actions = msg.action_sequence
+    node.get_logger().info(f"Received prefix plan actions: {prefix_actions}")
+
+# SuffixPlan callback
+def suffix_plan_callback(msg):
+    global suffix_actions
+    suffix_actions = msg.action_sequence
+    node.get_logger().info(f"Received suffix plan actions: {suffix_actions}")
+
+# Subscribers
+topic_replanning_response = '/robot1/replanning_response'
+relay_response_subscriber = node.create_subscription(RelayResponse, topic_replanning_response, relay_response_callback, 10)
+
+topic_prefix_plan = '/robot1/prefix_plan'
+prefix_plan_subscriber = node.create_subscription(LTLPlan, topic_prefix_plan, prefix_plan_callback, 10)
+
+topic_suffix_plan = '/robot1/suffix_plan'
+suffix_plan_subscriber = node.create_subscription(LTLPlan, topic_suffix_plan, suffix_plan_callback, 10)
 
 ## Initialize World
 
@@ -78,6 +113,40 @@ world = World()
 
 ####################################################################################################
 ##### Develop Grid #####
+
+def parse_action_sequence(action_sequence):
+    x_coords = []
+    y_coords = []
+    flags = []
+
+    last_x, last_y = None, None
+
+    for action in action_sequence:
+        if action.startswith("goto_c"):
+            parts = action.split("_r")
+            x = int(parts[0].split("c")[-1])
+            y = int(parts[1])
+            flag = 'g'
+        elif action == "load":
+            x, y = last_x, last_y
+            flag = 'l'
+        elif action == "unload":
+            x, y = last_x, last_y
+            flag = 'u'
+        elif action == "stay":
+            x, y = last_x, last_y
+            flag = 's'
+        else:
+            node.get_logger().warn(f"Unknown action: {action}")
+            continue
+
+        x_coords.append(x)
+        y_coords.append(y)
+        flags.append(flag)
+
+        last_x, last_y = x, y
+
+    return x_coords, y_coords, flags
 
 ## Import Grid Reference
 keyN = 0
