@@ -57,13 +57,12 @@ class GridWorld(object):
         # Initialize the screen
         self.screen = pygame.display.set_mode((self.width, self.height))
         self.font = pygame.font.SysFont('timesnewroman',  20)
-        self.on_hold = False
         
         # self.frame_count = 0 
         # filename = "screen_%04d.png" % (self.frame_count)
         # pygame.image.save(self.screen, filename)
         # time.sleep(5)
-        self.output_video = cv2.VideoWriter('/home/<USER>/<PLAN_OUTPUT_VIDEO_DIRECTORY>/output_video.avi', cv2.VideoWriter_fourcc(*'XVID'), 30, (self.width, self.height))
+        self.output_video = cv2.VideoWriter('/home/jren313/Downloads/output_video.avi', cv2.VideoWriter_fourcc(*'XVID'), 30, (self.width, self.height))
         
         pygame.display.set_caption("Grid with Moving Circle")
 
@@ -192,8 +191,8 @@ class LTLControllerDrone(Node):
             self.prefix_action_list = msg.new_plan_prefix.action_sequence
             self.prefix_state_sequence = msg.new_plan_prefix.ts_state_sequence
             self.suffix_action_list = msg.new_plan_suffix.action_sequence
-            self.suffix_action_list = msg.new_plan_suffix.ts_state_sequence
-        self.on_hold = False
+            self.suffix_state_sequence = msg.new_plan_suffix.ts_state_sequence
+            self.on_hold = False
 
     def next_move(self):
         # if self.plan_index > 20 and self.pose == (grid_size/2-1, grid_size/2-1): #self.len(self.prefix_action_list) + len(self.suffix_action_list):
@@ -247,6 +246,7 @@ class LTLControllerDrone(Node):
                                     #     self.prefix_plan_callback(response.new_plan_prefix)
                                     #     self.suffix_plan_callback(response.new_plan_suffix)
                                     #     return
+                                    self.on_hold = True
                                     publish_msg = RelayRequest()
                                     self.get_logger().info("checkpoint2")
                                     publish_msg.type = "delete"
@@ -257,7 +257,7 @@ class LTLControllerDrone(Node):
                                     publish_msg.cost = 0.0
                                     self.get_logger().info("checkpoint3")
                                     self.relay_pub.publish(publish_msg)
-                                    time.sleep(100)
+                                    self.on_hold = True
                                     return
                                 except Exception as e:
                                     self.get_logger().error(f'Failed to call service: {e}')
@@ -298,6 +298,7 @@ class LTLControllerDrone(Node):
                                     publish_msg.exec_index = self.plan_index
                                     publish_msg.cost = 50.0
                                     self.relay_pub.publish(publish_msg)
+                                    self.on_hold = True
                                     return
                                 except Exception as e:
                                     self.get_logger().error(f'Failed to call service: {e}')
@@ -388,6 +389,7 @@ class LTLControllerDrone(Node):
                                     publish_msg.exec_index = self.plan_index
                                     publish_msg.cost = 0.0
                                     self.relay_pub.publish(publish_msg)
+                                    self.on_hold = True
                                     return
                                 except Exception as e:
                                     self.get_logger().error(f'Failed to call service: {e}')
@@ -427,6 +429,7 @@ class LTLControllerDrone(Node):
                                     publish_msg.exec_index = self.plan_index
                                     publish_msg.cost = 50.0
                                     self.relay_pub.publish(publish_msg)
+                                    self.on_hold = True
                                     return
                                 except Exception as e:
                                     self.get_logger().error(f'Failed to call service: {e}')
@@ -496,17 +499,17 @@ class LTLControllerDrone(Node):
             # # # Update to next action
             # self.get_logger.info(f"An error occurred: {e}")
             if (self.get_clock().now().nanoseconds - self.t_sim.nanoseconds) / 1e9 >= self.next_interval/50:      
+                # self.get_logger().info(f"self.on_hold: {self.on_hold}")
                 if self.on_hold == False:             
                     self.next_move()
-                self.t_sim = self.get_clock().now()
-                # self.get_logger().info("inside c")    
+                self.t_sim = self.get_clock().now()    
                 if self.pose != self.previous_pose:
                     if (self.previous_pose, self.pose) in self.world.bump or (self.pose, self.pose) in self.world.bump:
                         self.total_cost += 50
                     else:
                         self.total_cost += 10
                     try:
-                        with open('/home/<USER>/robot_data_10.csv', mode='a', newline='') as file:
+                        with open('/home/jren313/robot_data_10.csv', mode='a', newline='') as file:
                             writer = csv.writer(file)
                             writer.writerow(self.pose_history[-1])
                     except Exception as e:

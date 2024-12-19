@@ -61,7 +61,7 @@ class GridWorld(object):
         # filename = "screen_%04d.png" % (self.frame_count)
         # pygame.image.save(self.screen, filename)
         # time.sleep(5)
-        self.output_video = cv2.VideoWriter('/home/<USER>/<PLAN_OUTPUT_VIDEO_DIRECTORY>/output_video.avi', cv2.VideoWriter_fourcc(*'XVID'), 30, (self.width, self.height))
+        self.output_video = cv2.VideoWriter('/home/jren313/Downloads/output_video.avi', cv2.VideoWriter_fourcc(*'XVID'), 30, (self.width, self.height))
         
         pygame.display.set_caption("Grid with Moving Circle")
 
@@ -411,7 +411,7 @@ class LTLControllerDrone(Node):
                         else:
                             self.total_cost += 10
                         try:
-                            with open('/home/<USER>/robot_data_10.csv', mode='a', newline='') as file:
+                            with open('/home/jren313/robot_data_10.csv', mode='a', newline='') as file:
                                 writer = csv.writer(file)
                                 writer.writerow(self.pose_history[-1])
                         except Exception as e:
