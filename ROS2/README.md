@@ -39,7 +39,7 @@ workspace_folder/
 Some paths in the LTL-D* planner packages have been hardcoded for now and need to be changed. I have listed files and the line numbers here:
 * `multiagent-sim/ROS2/ltl_planner/ltl_automaton_planner/launch/ltl_planner_isaac_launch.py`, line 18
 * `multiagent-sim/ROS2/ltl_planner/ltl_automaton_planner/ltl_automaton_planner/benchmark_node.py`, line 65
-* `multiagent-sim/ROS2/ltl_planner/ltl_automaton_planner/ltl_automaton_planner/benchmark_node.py`, 512
+* `multiagent-sim/ROS2/ltl_planner/ltl_automaton_planner/ltl_automaton_planner/benchmark_node.py`, 516
 * `multiagent-sim/ROS2/ltl_planner/ltl_automaton_planner/ltl_automaton_planner/nodes/benchmark_node.py`, line 64
 * `multiagent-sim/ROS2/ltl_planner/ltl_automaton_planner/ltl_automaton_planner/nodes/benchmark_node.py`, line 414
 * `multiagent-sim/ROS2/ltl_planner/ltl_automaton_planner/ltl_automaton_planner/nodes/simulation_node.py`, line 61

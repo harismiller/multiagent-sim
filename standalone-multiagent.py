@@ -37,6 +37,7 @@ from interfaces_hmm_sim.msg import AgentPoses
 from ltl_automaton_msgs.msg import TransitionSystemState, TransitionSystemStateStamped, LTLPlan, RelayResponse
 
 import drone
+from helper import parse_action_sequence, print_state
 
 ####################################################################################################
 ##### User Inputs #####
@@ -50,11 +51,12 @@ usd_path = "./environments/Small_Enviornment-Multiagent.usd" #File with the worl
 ## Isaac Sim Paths
 
 quad_path1 = "/World/quads/quad1" #Path to drone in the environment USD
-quad_path2 = "/World/quads/quad2"
-quad_path3 = "/World/quads/quad3"
-quad_path4 = "/World/quads/quad4"
+# quad_path2 = "/World/quads/quad2"
+# quad_path3 = "/World/quads/quad3"
+# quad_path4 = "/World/quads/quad4"
 
-quad_path_list = [quad_path1, quad_path2, quad_path3, quad_path4]
+# quad_path_list = [quad_path1, quad_path2, quad_path3, quad_path4]
+quad_path_list = [quad_path1]
 
 ## Define Bumps
 
@@ -114,39 +116,6 @@ world = World()
 ####################################################################################################
 ##### Develop Grid #####
 
-def parse_action_sequence(action_sequence):
-    x_coords = []
-    y_coords = []
-    flags = []
-
-    last_x, last_y = None, None
-
-    for action in action_sequence:
-        if action.startswith("goto_c"):
-            parts = action.split("_r")
-            x = int(parts[0].split("c")[-1])
-            y = int(parts[1])
-            flag = 'g'
-        elif action == "load":
-            x, y = last_x, last_y
-            flag = 'l'
-        elif action == "unload":
-            x, y = last_x, last_y
-            flag = 'u'
-        elif action == "stay":
-            x, y = last_x, last_y
-            flag = 's'
-        else:
-            node.get_logger().warn(f"Unknown action: {action}")
-            continue
-
-        x_coords.append(x)
-        y_coords.append(y)
-        flags.append(flag)
-
-        last_x, last_y = x, y
-
-    return x_coords, y_coords, flags
 
 ## Import Grid Reference
 keyN = 0
@@ -270,21 +239,25 @@ y_grid1 = y_grid
 x_grid1 = x_grid
 dz1 =  dz
 
-y_grid2 = [2, 3, 3, 1, 1, 0, 0, 0, 0, 0, 2]
-x_grid2 = [2, 2, 4, 4, 1, 1, 0, 1, 0, 1, 1]
-dz2 = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# y_grid2 = [2, 3, 3, 1, 1, 0, 0, 0, 0, 0, 2]
+# x_grid2 = [2, 2, 4, 4, 1, 1, 0, 1, 0, 1, 1]
+# dz2 = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 
-y_grid3 = [3, 3, 1, 1, 4, 4, 4, 1, 1, 4, 4, 4, 3, 3]
-x_grid3 = [2, 5, 5, 0, 0, 1, 5, 5, 0, 0, 1, 5, 5, 2]
-dz3 = [1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 3, 1, 1, 1]
+# y_grid3 = [3, 3, 1, 1, 4, 4, 4, 1, 1, 4, 4, 4, 3, 3]
+# x_grid3 = [2, 5, 5, 0, 0, 1, 5, 5, 0, 0, 1, 5, 5, 2]
+# dz3 = [1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 3, 1, 1, 1]
 
-y_grid4 = [0, 0, 0, 0]
-x_grid4 = [4, 5, 4, 5]
-dz4 = [1, 1, 1, 1]
+# y_grid4 = [0, 0, 0, 0]
+# x_grid4 = [4, 5, 4, 5]
+# dz4 = [1, 1, 1, 1]
 
-x_grid_list = [x_grid1, x_grid2, x_grid3, x_grid4]
-y_grid_list = [y_grid1, y_grid2, y_grid3, y_grid4]
-dz_list = [dz1, dz2, dz3, dz4]
+# x_grid_list = [x_grid1, x_grid2, x_grid3, x_grid4]
+# y_grid_list = [y_grid1, y_grid2, y_grid3, y_grid4]
+# dz_list = [dz1, dz2, dz3, dz4]
+
+x_grid_list = [x_grid1]
+y_grid_list = [y_grid1]
+dz_list = [dz1]
 
 ####################################################################################################
 ##### Drone Controller Parameters #####
@@ -347,16 +320,6 @@ def keyboard_event(event, *args, **kwargs):
         #     print(f'Origin: {y0},{x0}')
         #     print(dx)
         #     print(dy)
-
-def print_state(name,gp,d,dind,v,goal):
-    if not goal:
-        # print('Going to pose...')
-        print(f'Quad: {name}')
-        print(f'Global Pose: {gp}')
-        # print(f'Goal Point: {dind}')
-        print(f'Goal: ({d[0]}, {d[1]}, {d[2]})')
-        # print(f'Velocity: {v[0]},{v[1]},{v[2]}')
-        print('-------------------------------------')
         
 ####################################################################################################
 ##### Main Code #####
@@ -372,6 +335,14 @@ while rclpy.ok():
     input.subscribe_to_keyboard_events(appwindow.get_keyboard(), keyboard_event)
 
     drone_poses_msg = AgentPoses()
+
+    if not prefix_actions:
+        print("Waiting........")
+    else:
+        hx, hy, hflags = parse_action_sequence(prefix_actions)
+        print("------------------------------------------------")
+        print(f"x: {hx}, y: {hy}")
+        print(f"flags: {hflags}")
 
     drone_count = 0
     if start:

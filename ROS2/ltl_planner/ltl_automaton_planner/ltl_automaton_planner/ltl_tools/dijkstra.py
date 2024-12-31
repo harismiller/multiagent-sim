@@ -35,7 +35,7 @@ class Dijkstra(object):
                                     #print("opti_pred", opti_pred)
                                     suffix = compute_path_from_pre(loop_pre, opti_pred)
                                     self.loop[prod_target] = (cycle[opti_pred], suffix)
-        print("loop:", time.time()-start)
+        # print("loop:", time.time()-start)
         new_start = time.time()
         # shortest line
         for prod_init in product.graph['initial']:
@@ -64,7 +64,7 @@ class Dijkstra(object):
             prefix, precost, suffix, sufcost = min(self.runs.values(), key = lambda p: p[1] + gamma*p[3])
             run = ProdAut_Run(product, prefix, precost, suffix, sufcost, precost+gamma*sufcost)
             # rospy.logdebug('Dijkstra_plan_networkX done within %.2fs: prefix cost %.2f, sufix cost %.2f' %(time.time()-start, precost, sufcost))
-            print("line:", time.time()-new_start)
+            # print("line:", time.time()-new_start)
             return run, time.time()-start
         
         # rospy.logerr('No accepting run found in optimal planning!')
@@ -87,7 +87,7 @@ class Dijkstra(object):
                 if len(product.pred[prod_target]) != 0:
                     now = time.time()
                     loop_pre, loop_dist = dijkstra_predecessor_and_distance(product, prod_target)
-                    print(prod_target, time.time()-now)
+                    # print(prod_target, time.time()-now)
                 for target_pred in product.predecessors(prod_target):
                     if target_pred in loop_dist:
                         cycle[target_pred] = product.edges[target_pred,prod_target]["weight"] + loop_dist[target_pred]
@@ -96,7 +96,7 @@ class Dijkstra(object):
                     suffix = compute_path_from_pre(loop_pre, opti_pred)
                     self.loop[prod_target] = (cycle[opti_pred], suffix)
         # shortest line
-        print("product_init", prod_init)
+        # print("product_init", prod_init)
         line = {}
         line_pre, line_dist = dijkstra_predecessor_and_distance(product, prod_init)
         line_pre.pop(prod_init)

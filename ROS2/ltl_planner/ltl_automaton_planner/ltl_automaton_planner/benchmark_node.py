@@ -62,7 +62,7 @@ class GridWorld(object):
         # filename = "screen_%04d.png" % (self.frame_count)
         # pygame.image.save(self.screen, filename)
         # time.sleep(5)
-        self.output_video = cv2.VideoWriter('/home/jren313/Downloads/output_video.avi', cv2.VideoWriter_fourcc(*'XVID'), 30, (self.width, self.height))
+        self.output_video = cv2.VideoWriter('/home/haris/Isaac/planner/results/output_video.avi', cv2.VideoWriter_fourcc(*'XVID'), 30, (self.width, self.height))
         
         pygame.display.set_caption("Grid with Moving Circle")
 
@@ -202,7 +202,7 @@ class LTLControllerDrone(Node):
         #--------------
         # self.get_logger().info("inside the next move")
         if (len(self.prefix_action_list) + len(self.suffix_action_list) != 0):
-            self.get_logger().info(f"plan index: {self.plan_index}")
+            # self.get_logger().info(f"plan index: {self.plan_index}")
             if self.plan_index < len(self.prefix_action_list):
                 #self.get_logger().info("beanchmark fix 0")
                 for act in self.transition_system['actions']:
@@ -213,18 +213,18 @@ class LTLControllerDrone(Node):
                         action_dict = self.transition_system['actions'][str(act)]
                         # print(self.prefix_action_list)
                         if str(act)[:4] == "goto":
-                            self.get_logger().info("beanchmark fix 0.3")
+                            # self.get_logger().info("beanchmark fix 0.3")
                             self.previous_pose = self.pose
                             self.pose = extract_numbers(str(act))
-                            self.get_logger().info(f"previous pose: {self.previous_pose}")
-                            self.get_logger().info(f"pose: {self.pose}")
+                            # self.get_logger().info(f"previous pose: {self.previous_pose}")
+                            # self.get_logger().info(f"pose: {self.pose}")
                             if (self.previous_pose, self.pose) in self.world.wall or (self.pose, self.previous_pose) in self.world.wall:
                                 self.get_logger().info("--------Obstacle detected---------")
                                 self.world.wall[((self.previous_pose, self.pose))] = 1
                                 self.world.wall[((self.pose, self.previous_pose))] = 1
                                 # self.if_obs = True
                                 try: 
-                                    self.get_logger().info("checkpoint1")
+                                    # self.get_logger().info("checkpoint1")
                                     # task_replanning_srv = TaskReplanningDelete.Request()
                                     # # print(self.prefix_state_sequence[self.plan_index].states)
                                     # task_replanning_srv.current_state = self.prefix_state_sequence[self.plan_index]
@@ -248,28 +248,29 @@ class LTLControllerDrone(Node):
                                     #     return
                                     self.on_hold = True
                                     publish_msg = RelayRequest()
-                                    self.get_logger().info("checkpoint2")
+                                    # self.get_logger().info("checkpoint2")
                                     publish_msg.type = "delete"
                                     publish_msg.current_state = self.prefix_state_sequence[self.plan_index]
                                     publish_msg.from_pose.extend(list(self.previous_pose))
                                     publish_msg.to_pose.extend(list(self.pose))
                                     publish_msg.exec_index = self.plan_index
                                     publish_msg.cost = 0.0
-                                    self.get_logger().info("checkpoint3")
+                                    # self.get_logger().info("checkpoint3")
                                     self.relay_pub.publish(publish_msg)
                                     self.on_hold = True
+                                    self.pose = self.previous_pose
                                     return
                                 except Exception as e:
                                     self.get_logger().error(f'Failed to call service: {e}')
                                     exit(1)
-                            self.get_logger().info("beanchmark fix 0.4")       
+                            # self.get_logger().info("beanchmark fix 0.4")       
                             if self.world.bump.get((self.previous_pose, self.pose)) == 0 or self.world.bump.get((self.pose, self.previous_pose)) == 0 :
                                 self.get_logger().info("--------Obstacle detected---------")
                                 self.world.bump[((self.previous_pose, self.pose))] = 1
                                 self.world.bump[((self.pose, self.previous_pose))] = 1
                                 # self.if_obs = True
                                 try: 
-                                    self.get_logger().info("checkpoint3")
+                                    # self.get_logger().info("checkpoint3")
                                     # task_replanning_srv = TaskReplanningModify.Request()
                                     # # print(self.prefix_state_sequence[self.plan_index].states)
                                     # task_replanning_srv.current_state = self.prefix_state_sequence[self.plan_index]
@@ -299,11 +300,12 @@ class LTLControllerDrone(Node):
                                     publish_msg.cost = 50.0
                                     self.relay_pub.publish(publish_msg)
                                     self.on_hold = True
+                                    self.pose = self.previous_pose
                                     return
                                 except Exception as e:
                                     self.get_logger().error(f'Failed to call service: {e}')
                                     exit(1)
-                            self.get_logger().info("beanchmark fix 0.5")    
+                            # self.get_logger().info("beanchmark fix 0.5")    
                             # self.pose = (int(str(act).split('c')[1]), int(str(act).split('r')[1]))
                         elif str(act) == "unload" or str(act) == "release":
                             self.mode = EquipmentMode.UNLOADED
@@ -318,7 +320,7 @@ class LTLControllerDrone(Node):
                         print(self.mode)
                         self.t = self.get_clock().now().to_msg()
                         self.next_interval = action_dict['weight'] # +1
-                        self.get_logger().info("beanchmark fix 0.6")
+                        # self.get_logger().info("beanchmark fix 0.6")
                         ##### Logging
                         last_round_time = 50 if (self.previous_pose, self.pose) in self.world.bump else 10
                         last_time = self.pose_history[-1][1]
@@ -339,7 +341,7 @@ class LTLControllerDrone(Node):
                             else:
                                 future_time += 50
                         self.pose_history.append((self.pose, round(last_round_time+last_time), round(future_step), round(future_time)))
-                        self.get_logger().info("beanchmark fix 0.7")
+                        # self.get_logger().info("beanchmark fix 0.7")
                         return
 
             if self.plan_index >= len(self.prefix_action_list):
@@ -390,6 +392,7 @@ class LTLControllerDrone(Node):
                                     publish_msg.cost = 0.0
                                     self.relay_pub.publish(publish_msg)
                                     self.on_hold = True
+                                    self.pose = self.previous_pose
                                     return
                                 except Exception as e:
                                     self.get_logger().error(f'Failed to call service: {e}')
@@ -430,6 +433,7 @@ class LTLControllerDrone(Node):
                                     publish_msg.cost = 50.0
                                     self.relay_pub.publish(publish_msg)
                                     self.on_hold = True
+                                    self.pose = self.previous_pose
                                     return
                                 except Exception as e:
                                     self.get_logger().error(f'Failed to call service: {e}')
@@ -509,26 +513,27 @@ class LTLControllerDrone(Node):
                     else:
                         self.total_cost += 10
                     try:
-                        with open('/home/jren313/robot_data_10.csv', mode='a', newline='') as file:
+                        with open('/home/haris/robot_data_10.csv', mode='a', newline='') as file:
                             writer = csv.writer(file)
                             writer.writerow(self.pose_history[-1])
                     except Exception as e:
                         print(f"An error occurred: {e}")
                 # print("total_cost: ", self.total_cost)
-
+            
             # Draw the moving agent
             # text = pygame.font.SysFont('timesnewroman', 10).render(str(self.mode), True, BLACK, WHITE)
             # text_ = text.get_rect()
             # text_.center = (int(self.pose[0] * self.world.cell_size + self.world.cell_size/2), \
             #     self.world.height - int(self.pose[1] * self.world.cell_size + self.world.cell_size/2))
-            
-            for i in range(1, self.world.grid_size-1):
-                pygame.draw.line(self.world.screen, BLACK,  
-                            (self.world.grid_size/2*self.world.cell_size, (i+1)*self.world.cell_size),\
-                            ((self.world.grid_size/2)*self.world.cell_size, i*self.world.cell_size), 5)
-                pygame.draw.line(self.world.screen, BLACK,  
-                            (i*self.world.cell_size, self.world.grid_size/2*self.world.cell_size),\
-                            ((i+1)*self.world.cell_size, (self.world.grid_size/2)*self.world.cell_size), 5)
+            # self.get_logger().info(f"Pose in simulate: x={self.pose[0]}, y={self.pose[1]}")
+            # self.get_logger().info("----------------------------------------------------------------------------------")
+            # for i in range(1, self.world.grid_size-1):
+            #     pygame.draw.line(self.world.screen, BLACK,  
+            #                 (self.world.grid_size/2*self.world.cell_size, (i+1)*self.world.cell_size),\
+            #                 ((self.world.grid_size/2)*self.world.cell_size, i*self.world.cell_size), 5)
+            #     pygame.draw.line(self.world.screen, BLACK,  
+            #                 (i*self.world.cell_size, self.world.grid_size/2*self.world.cell_size),\
+            #                 ((i+1)*self.world.cell_size, (self.world.grid_size/2)*self.world.cell_size), 5)
             
             for wall, checked in self.world.wall.items():
                 if checked:

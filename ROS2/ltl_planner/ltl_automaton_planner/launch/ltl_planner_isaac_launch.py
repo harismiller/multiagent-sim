@@ -15,7 +15,7 @@ def generate_launch_description():
     current_file_dir = os.path.dirname(os.path.realpath(__file__))
     
     # Navigate up to the src directory
-    workspace_dir = os.path.join('/home/jren313/ros2_ws/', 'src/lmco')
+    workspace_dir = os.path.join('/home/haris/ros2_ws/', 'src/lmco')
     package_src_dir = os.path.join(workspace_dir, 'ltl_automaton_planner')
     config_dir = os.path.join(package_src_dir, 'config')
 
@@ -25,7 +25,7 @@ def generate_launch_description():
     ld = LaunchDescription()
     declare_argo_type_cmd = DeclareLaunchArgument(
         'algo_type',
-        default_value='brute-force',
+        default_value='relaxed',
         description='Algorithm type (e.g., dstar-relaxed/brute-force/local/relaxed)'
     )
     declare_namespace1_cmd = DeclareLaunchArgument(
@@ -58,7 +58,8 @@ def generate_launch_description():
             name='benchmark_node',
             output='screen',
             parameters=[ltl_formula_file,
-                         {'transition_system_textfile': transition_system_file}]
+                         {'transition_system_textfile': transition_system_file},
+                         {'N': 6}]
         ),
         Node(
             package='ltl_automaton_planner',
@@ -68,7 +69,38 @@ def generate_launch_description():
             parameters=[
                 ltl_formula_file,
                 {'algo_type': LaunchConfiguration('algo_type')},
-                {'transition_system_textfile': transition_system_file}
+                {'transition_system_textfile': transition_system_file},
+                {'init_state': 'c0_r0'}
+            ]
+        ),
+        # Node(
+        #     package='ltl_automaton_planner',
+        #     executable='relay_node',
+        #     name='relay_node',
+        #     output='screen',
+        # )
+    ])
+    robot_2_node = GroupAction([
+        PushRosNamespace(LaunchConfiguration('robot2_namespace')),
+        Node(
+            package='ltl_automaton_planner',
+            executable='benchmark_node',
+            name='benchmark_node',
+            output='screen',
+            parameters=[ltl_formula_file,
+                         {'transition_system_textfile': transition_system_file},
+                         {'N': 6}]
+        ),
+        Node(
+            package='ltl_automaton_planner',
+            executable='planner_node',
+            name='planner_node',
+            output='screen',
+            parameters=[
+                ltl_formula_file,
+                {'algo_type': LaunchConfiguration('algo_type')},
+                {'transition_system_textfile': transition_system_file},
+                {'init_state': 'c4_r3'}
             ]
         ),
         # Node(
@@ -80,9 +112,11 @@ def generate_launch_description():
     ])
     ld.add_action(declare_argo_type_cmd)
     ld.add_action(declare_namespace1_cmd)
+    ld.add_action(declare_namespace2_cmd)
     ld.add_action(declare_ltl_file_cmd)
     ld.add_action(declare_ts_file_cmd)
     ld.add_action(robot_1_node)
+    ld.add_action(robot_2_node)
     
     return ld
 

@@ -59,6 +59,7 @@ class MainPlanner(Node):
         self.declare_parameter('transition_system_textfile', "")  
         self.declare_parameter('algo_type', 'dstar')  
         self.declare_parameter('N', 10)
+        self.declare_parameter('init_state', 'c0_r0')
 
         self.agent_name = self.get_parameter('agent_name').get_parameter_value().string_value
         self.initial_beta = self.get_parameter('initial_beta').get_parameter_value().integer_value
@@ -79,7 +80,9 @@ class MainPlanner(Node):
         self.soft_task = self.get_parameter('soft_task').get_parameter_value().string_value
         transition_system_textfile = self.get_parameter('transition_system_textfile').get_parameter_value().string_value
         self.transition_system = import_ts_from_file(transition_system_textfile)
-        self.initial_state_ts_dict = None
+        self.initial_state_ts_dict = {'2d_pose_region': self.get_parameter('init_state').get_parameter_value().string_value,
+                                      'Drone_state': 'unloaded'}
+        print("**** inital state dict:", self.initial_state_ts_dict)
 
     
     def build_automaton(self):
