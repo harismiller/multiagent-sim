@@ -38,6 +38,11 @@ def generate_launch_description():
         default_value='robot2',
         description='Namespace for the second robot'
     )
+    declare_namespace3_cmd = DeclareLaunchArgument(
+        'robot3_namespace',
+        default_value='robot3',
+        description='Namespace for the third robot'
+    )
     declare_ltl_file_cmd = DeclareLaunchArgument(
         'ltl_params_file',
         default_value=ltl_formula_file,
@@ -110,13 +115,45 @@ def generate_launch_description():
         #     output='screen',
         # )
     ])
+    robot_3_node = GroupAction([
+        PushRosNamespace(LaunchConfiguration('robot3_namespace')),
+        Node(
+            package='ltl_automaton_planner',
+            executable='benchmark_node',
+            name='benchmark_node',
+            output='screen',
+            parameters=[ltl_formula_file,
+                         {'transition_system_textfile': transition_system_file},
+                         {'N': 6}]
+        ),
+        Node(
+            package='ltl_automaton_planner',
+            executable='planner_node',
+            name='planner_node',
+            output='screen',
+            parameters=[
+                ltl_formula_file,
+                {'algo_type': LaunchConfiguration('algo_type')},
+                {'transition_system_textfile': transition_system_file},
+                {'init_state': 'c0_r2'}
+            ]
+        ),
+        # Node(
+        #     package='ltl_automaton_planner',
+        #     executable='relay_node',
+        #     name='relay_node',
+        #     output='screen',
+        # )
+    ])
     ld.add_action(declare_argo_type_cmd)
     ld.add_action(declare_namespace1_cmd)
     ld.add_action(declare_namespace2_cmd)
+    ld.add_action(declare_namespace3_cmd)
     ld.add_action(declare_ltl_file_cmd)
     ld.add_action(declare_ts_file_cmd)
     ld.add_action(robot_1_node)
     ld.add_action(robot_2_node)
+    ld.add_action(robot_3_node)
     
     return ld
 

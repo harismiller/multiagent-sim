@@ -1,0 +1,16 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/jren313/catkin_ws/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages",
+        "/home/jren313/ros2_ws/install/ltl_automaton_msgs/lib/python3.8/site-packages",
+        "/home/jren313/ros2_ws/install/ltl_automaton_planner/lib/python3.8/site-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/jren313/catkin_ws/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages",
+        "./ltl_automaton_planner/src",
+        "/home/jren313/ros2_ws/install/ltl_automaton_msgs/lib/python3.8/site-packages",
+        "/home/jren313/ros2_ws/install/ltl_automaton_planner/lib/python3.8/site-packages"
+    ],
+    "cmake.sourceDirectory": "/home/jren313/ros2_ws/src/lmco/ltl_automaton_msgs"
+}
