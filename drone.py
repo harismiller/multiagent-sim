@@ -3,8 +3,8 @@ import numpy as np
 class Drone:
     def __init__(self, name: str, 
                  path: str, 
-                 PID: list = [1.5,0,2], 
-                 zPID: list = [2,0,0.5],
+                 PID: list = [1,0,0], 
+                 zPID: list = [1,0,0],
                  state: int = 0) -> None:
                  
         self.name = name
@@ -31,11 +31,19 @@ class Drone:
         self.dy = []
         self.dx = []
         self.dz = []
+        self.flags = []
 
-    def setPath(self, x_grid: list, y_grid: list, dz:list, key) -> None:
+        self.y_grid = []
+        self.x_grid = []
+
+    def setPath(self, x_grid: list, y_grid: list, dz:list, flags:list, key) -> None:
+        self.y_grid = y_grid
+        self.x_grid = x_grid
+
         self.dy = [key[i][0] for i in y_grid]
         self.dx = [key[i][1] for i in x_grid]
         self.dz = dz
+        self.flags = flags
 
     def setPID(self, PID: list, zPID: list) -> None:
         self.PID = PID
