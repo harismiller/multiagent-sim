@@ -32,7 +32,11 @@ from interfaces_hmm_sim.msg import Status
 # action attributes defined in the TS config file
 #=================================================================
 
+<<<<<<< HEAD
 USE_ISAAC = True
+=======
+USE_ISAAC = False
+>>>>>>> 29f7914 (Added JSON support)
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)

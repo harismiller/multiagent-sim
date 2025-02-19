@@ -2,6 +2,10 @@ import numpy
 import json
 import csv
 import yaml
+import time
+
+def elapsed_time(start_time):
+    return time.time() - start_time
 
 def parse_action_sequence(action_sequence, bumps):
     x_coords = []
