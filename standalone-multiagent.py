@@ -52,11 +52,13 @@ usd_path = "./environments/Small_Enviornment-Multiagent.usd" #File with the worl
 
 quad_path1 = "/World/quads/quad1" #Path to drone in the environment USD
 quad_path2 = "/World/quads/quad2"
-quad_path3 = "/World/quads/quad3"
+# quad_path3 = "/World/quads/quad3"
 
-quad_path_list = [quad_path1, quad_path2, quad_path3]
+# quad_path_list = [quad_path1, quad_path2, quad_path3]
+quad_path_list = [quad_path1, quad_path2]
 
-init_grid_poses = [(0,0),(4,3),(3,2)]
+# init_grid_poses = [(0,0),(4,3),(3,2)]
+init_grid_poses = [(0,0),(4,3)]
 
 ## Define Bumps
 
@@ -291,7 +293,7 @@ while rclpy.ok():
         for agent in agent_nodes:
             if not agent["prefix_actions"]:
                 init_status = Status()
-                init_status.agent = agent["name"]
+                init_status.agent = agent_count
                 init_status.start = True
                 agent["status_publisher"].publish(init_status)
                 # print("------------------------------------------------")
@@ -362,10 +364,10 @@ while rclpy.ok():
                 drone_status.replan_received = True
                 agent["status_publisher"].publish(drone_status)
 
-            elif (wait_count[drone_count] < wait_val):
-                wait_count[drone_count] += 1
-                vel = Gf.Vec3f(0,0,0)
-                quad["rb"].GetVelocityAttr().Set(vel)
+            # elif (wait_count[drone_count] < wait_val):
+            #     wait_count[drone_count] += 1
+            #     vel = Gf.Vec3f(0,0,0)
+            #     quad["rb"].GetVelocityAttr().Set(vel)
 
             elif quad["rb"] and dind < len(dx):
 
@@ -404,7 +406,7 @@ while rclpy.ok():
                     #     print("********************************************************************************")
                     wait_count[drone_count] = 0
                     
-                    drone_status.agent = agent["name"]
+                    drone_status.agent = drone_countsudo 
                     drone_status.arrived = True
                     agent["status_publisher"].publish(drone_status)
                 vel = Gf.Vec3f(vx,vy,vz)
