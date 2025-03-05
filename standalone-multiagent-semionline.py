@@ -42,17 +42,22 @@ import drone
 import helper as hp
 from helper import elapsed_time, parse_action_sequence, print_state, read_selected_columns
 
+import json
+import os
+
+current_directory = os.getcwd()
+
 ####################################################################################################
 ##### User Inputs #####
 
 ## File Paths
 
-key_path = "./example/grid.csv" #File describing the world grid
-usd_path = "./environments/Small_Enviornment-Multiagent.usd" #File with the world enfironment
+key_path = os.path.join(current_directory,"example","grid.csv") #File describing the world grid
+usd_path = os.path.join(current_directory,"environments","Small_Enviornment-Multiagent.usd") #File with the world enfironment
 
-robot1_plan = "./plans/robot1_as.csv"
-robot2_plan = "./plans/robot2_as.csv"
-robot3_plan = "./plans/robot3_as.csv"
+robot1_plan = os.path.join(current_directory,"plans","robot1_as.csv")
+robot2_plan = os.path.join(current_directory,"plans","robot2_as.csv")
+robot3_plan = os.path.join(current_directory,"plans","robot3_as.csv")
 
 robot_plans = [robot1_plan, robot2_plan, robot3_plan]
 
@@ -75,7 +80,7 @@ blocks = [(2,2),(0,4)]
 
 filename_json = "simulation_data.json"
 
-def generate_json(start_time, robots, filename):
+def generate_json_old(start_time, robots, filename):
     data = {
         "simulator time": elapsed_time(start_time),
         "robots": {}
@@ -99,6 +104,43 @@ def generate_json(start_time, robots, filename):
     #######################################
 
     return json_output
+
+# Directory to store JSON files
+output_dir = "robot_jsons"
+os.makedirs(output_dir, exist_ok=True)
+
+def generate_json(start_time, robots):
+    data = {
+        "simulator time": elapsed_time(start_time),
+        "robots": {}
+    }
+    
+    for robot_id, robot_data in robots.items():
+        data["robots"][robot_id] = {
+            "plan": robot_data["plan"],
+            "plan_index": robot_data["plan_index"],
+            "immediate_goal": robot_data["immediate_goal"],
+            "x": robot_data["x"],
+            "y": robot_data["y"],
+            "mission_time": robot_data["mission_time"]
+        }
+
+    json_output = json.dumps(data, indent=4)
+
+    # Find the next available index for naming the file
+    existing_files = [int(f.split("_")[-1].split(".")[0]) for f in os.listdir(output_dir) if f.startswith("robot_data_") and f.endswith(".json")]
+    next_index = max(existing_files) + 1 if existing_files else 1
+
+    # Save JSON file
+    file_path = os.path.join(output_dir, f"robot_data_{next_index}.json")
+    with open(file_path, "w") as f:
+        f.write(json_output)
+
+    print(f"Saved: {file_path}")
+    return json_output
+
+
+
 
 ####################################################################################################
 ##### ROS2 Setup #####
@@ -230,7 +272,7 @@ print("World started!")
 
 ## Simple PID Gains
 kp = 6
-kp_z = 2
+kp_z = 3
 kd = 2
 kd_z = 0.5
 
@@ -285,10 +327,12 @@ for path in quad_path_list:
         "plan_index": 1,
         "immediate_goal": plan[1],
         "x": plan[0],
-        "y": plan[0]
+        "y": plan[0],
+        "mission_time": len(plan)-1-1
     }
     quad_count += 1
-out_json = generate_json(start_time, robots_JSON, filename_json)
+# out_json = generate_json_old(start_time, robots_JSON, filename_json)
+out_json = generate_json(start_time, robots_JSON)
 
 print("Agents created!")
 
@@ -429,7 +473,7 @@ while rclpy.ok():
                     goal_x = drone_obj.x_grid[dind]
                     goal = [goal_x,goal_y,dz[dind]]
 
-                    print_state(drone_obj.name,global_pose,goal,dind,v_curr,goal_reached)
+                    # print_state(drone_obj.name,global_pose,goal,dind,v_curr,goal_reached)
                     
                     if flags[dind] == 'r':
                         wait_count[drone_count] = 0
@@ -465,25 +509,29 @@ while rclpy.ok():
 
                 # print_state(drone_obj.name,global_pose,goal,dind,v_curr,goal_reached)
                 
-                if np.all(np.array(finalgoal_check)):
-                    print("All goals reach!")
-                    start = not start
             else:
                 finalgoal_check[drone_count] = True
+                # print(f'Final goal: {drone_count}, {dind}')
 
                 vel = Gf.Vec3f(0,0,0)
                 quad["rb"].GetVelocityAttr().Set(vel)
 
+            if np.all(np.array(finalgoal_check)):
+                    print("All goals reach!")
+                    start = not start
+
             quad["info"] = drone_obj
-            robot_id = drone_obj.name
+            robot_id = f'robot{drone_count}'
             plan = drone_obj.getPath()
-            curr_ind = dind if dind > 0 else 0
+            goal_ind = dind if dind < len(plan) else len(plan)-1
+            curr_ind = goal_ind-1 if goal_ind > 0 else 0
             robots_JSON[robot_id] = {
                 "plan": plan,
-                "plan_index": dind,
-                "immediate_goal": plan[dind],
-                "x": plan[curr_ind],
-                "y": plan[curr_ind]
+                "plan_index": goal_ind,
+                "immediate_goal": plan[goal_ind],
+                "x": plan[curr_ind][0],
+                "y": plan[curr_ind][1],
+                "mission_time": len(plan)-goal_ind-1
             }
 
             drone_count += 1
@@ -492,14 +540,17 @@ while rclpy.ok():
             # pose_publisher.publish(drone_poses_msg)
             # rate.sleep() # See comment about rate above
 
+
     else:
         vel = Gf.Vec3f(0,0,0)
         for quad in quad_list:
             quad["rb"].GetVelocityAttr().Set(vel) 
 
+
     current_time = time.time()
-    if current_time >= next_print_time:
-        json_output = generate_json(current_time, robots_JSON, filename_json)
+    if (current_time >= next_print_time and start):
+        # json_output = generate_json_old(current_time, robots_JSON, filename_json)
+        json_output = generate_json(current_time, robots_JSON)
         next_print_time += 10
         
 
