@@ -219,7 +219,7 @@ zPID = [kp_z,0,kd_z]
 ####################################################################################################
 ##### Initializations #####
 
-wait_val = 75
+wait_val = 25
 
 start = False
 init_paths = False
@@ -293,7 +293,7 @@ while rclpy.ok():
         for agent in agent_nodes:
             if not agent["prefix_actions"]:
                 init_status = Status()
-                init_status.agent = agent_count
+                init_status.agent = agent["name"]
                 init_status.start = True
                 agent["status_publisher"].publish(init_status)
                 # print("------------------------------------------------")
@@ -364,10 +364,10 @@ while rclpy.ok():
                 drone_status.replan_received = True
                 agent["status_publisher"].publish(drone_status)
 
-            # elif (wait_count[drone_count] < wait_val):
-            #     wait_count[drone_count] += 1
-            #     vel = Gf.Vec3f(0,0,0)
-            #     quad["rb"].GetVelocityAttr().Set(vel)
+            elif (wait_count[drone_count] < wait_val):
+                wait_count[drone_count] += 1
+                vel = Gf.Vec3f(0,0,0)
+                quad["rb"].GetVelocityAttr().Set(vel)
 
             elif quad["rb"] and dind < len(dx):
 
@@ -406,7 +406,7 @@ while rclpy.ok():
                     #     print("********************************************************************************")
                     wait_count[drone_count] = 0
                     
-                    drone_status.agent = drone_countsudo 
+                    drone_status.agent = agent["name"]
                     drone_status.arrived = True
                     agent["status_publisher"].publish(drone_status)
                 vel = Gf.Vec3f(vx,vy,vz)
