@@ -40,7 +40,7 @@ from ltl_automaton_msgs.msg import TransitionSystemState, TransitionSystemStateS
 
 import drone
 import helper as hp
-from helper import elapsed_time, parse_action_sequence, print_state, read_selected_columns
+from helper import elapsed_time, parse_action_sequence, print_state, read_selected_columns, load_replans
 
 import json
 import os
@@ -59,7 +59,12 @@ robot1_plan = os.path.join(current_directory,"plans","robot1_as.csv")
 robot2_plan = os.path.join(current_directory,"plans","robot2_as.csv")
 robot3_plan = os.path.join(current_directory,"plans","robot3_as.csv")
 
+robot1_replans = os.path.join(current_directory,"plans","formatted_robot1.yaml")
+robot2_replans = os.path.join(current_directory,"plans","formatted_robot2.yaml")
+robot3_replans = os.path.join(current_directory,"plans","formatted_robot1.yaml")
+
 robot_plans = [robot1_plan, robot2_plan, robot3_plan]
+robot_replans = [load_replans(robot1_replans), load_replans(robot2_replans), load_replans(robot3_replans)]
 
 ## Isaac Sim Paths
 
@@ -301,6 +306,7 @@ quad_list = []
 finalgoal_check = []
 init_start = []
 wait_count = []
+replan_count = []
 quad_count = 1
 robots_JSON = {}
         
@@ -321,16 +327,22 @@ for path in quad_path_list:
     init_start.append(False)
     quad_list.append(quad_new)
     wait_count.append(wait_val)
+    replan_count.append(0)
 
     robot_id = f'robot{quad_count}'
-    plan = drone_new.getPath()
+    # plan = drone_new.getPath()
+    plan = robot_replans[quad_count-1]
+    # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    # print(replan_count[quad_count-1])
+    plan = [init_grid_poses[quad_count-1]] + plan[f"replan{replan_count[quad_count-1]}"]
     robots_JSON[robot_id] = {
         "plan": plan,
         "plan_index": 1,
         "immediate_goal": plan[1],
         "x": plan[0][0],
         "y": plan[0][1],
-        "mission_time": len(plan)-1-1
+        "mission_time": len(plan)-1-1-replan_count[quad_count-1],
+        "replan_flag": False
     }
     quad_count += 1
 # out_json = generate_json_old(start_time, robots_JSON, filename_json)
@@ -376,7 +388,7 @@ while rclpy.ok():
     input = carb.input.acquire_input_interface()
     input.subscribe_to_keyboard_events(appwindow.get_keyboard(), keyboard_event)
 
-    robots_JSON = {}
+    # robots_JSON = {}
 
     if start:
         drone_count = 0
@@ -479,6 +491,27 @@ while rclpy.ok():
                     
                     if flags[dind] == 'r':
                         wait_count[drone_count] = 0
+                        replan_count[drone_count] += 1
+                        
+                        robot_id = f'robot{drone_count+1}'
+                        plan = robot_replans[drone_count]
+                        plan = [init_grid_poses[drone_count]] + plan[f"replan{replan_count[drone_count]}"]
+                        goal_ind = dind if dind < len(plan) else len(plan)-1
+                        curr_ind = goal_ind-1 if goal_ind > 0 else 0
+                        robots_JSON[robot_id] = {
+                            "plan": plan,
+                            "plan_index": goal_ind,
+                            "immediate_goal": plan[goal_ind],
+                            "x": plan[curr_ind][0],
+                            "y": plan[curr_ind][1],
+                            "mission_time": len(plan)-goal_ind-1-replan_count[drone_count],
+                            "replan_flag": True
+                        }
+
+                        print(f"Replanned robot{drone_count}, replan{replan_count[drone_count]}!")
+                        print(robots_JSON[robot_id])
+                        json_output = generate_json(start_time, robots_JSON)
+                        
                     else:
                         drone_obj.dind +=1
                     
@@ -524,7 +557,9 @@ while rclpy.ok():
 
             quad["info"] = drone_obj
             robot_id = f'robot{drone_count+1}'
-            plan = drone_obj.getPath()
+            # plan = drone_obj.getPath()
+            plan = robot_replans[drone_count]
+            plan = [init_grid_poses[drone_count]] + plan[f"replan{replan_count[drone_count]}"]
             goal_ind = dind if dind < len(plan) else len(plan)-1
             curr_ind = goal_ind-1 if goal_ind > 0 else 0
             robots_JSON[robot_id] = {
@@ -533,7 +568,8 @@ while rclpy.ok():
                 "immediate_goal": plan[goal_ind],
                 "x": plan[curr_ind][0],
                 "y": plan[curr_ind][1],
-                "mission_time": len(plan)-goal_ind-1
+                "mission_time": len(plan)-goal_ind-1-replan_count[drone_count],
+                "replan_flag": False
             }
 
             drone_count += 1
@@ -541,13 +577,14 @@ while rclpy.ok():
             # Publish drone poses
             # pose_publisher.publish(drone_poses_msg)
             # rate.sleep() # See comment about rate above
-        
-        current_time = time.time()
-    if (current_time >= next_print_time and start):
-        # json_output = generate_json_old(current_time, robots_JSON, filename_json)
-        json_output = generate_json(start_time, robots_JSON)
-        next_print_time += json_time
 
+        current_time = time.time()
+        if (current_time >= next_print_time and start):
+            # json_output = generate_json_old(current_time, robots_JSON, filename_json)
+            json_output = generate_json(start_time, robots_JSON)
+            next_print_time += json_time
+
+        
     else:
         vel = Gf.Vec3f(0,0,0)
         for quad in quad_list:
