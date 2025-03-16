@@ -52,42 +52,61 @@ current_directory = os.getcwd()
 
 ## File Paths
 
-key_path = os.path.join(current_directory,"example","grid.csv") #File describing the world grid
-usd_path = os.path.join(current_directory,"environments","Small_Enviornment-Multiagent.usd") #File with the world enfironment
+key_direc = "example/small_environment/grid.csv"
+env_file = "Small_Enviornment-Multiagent.usd"
+plans_direc = "small_environment"
 
-robot1_plan = os.path.join(current_directory,"plans","robot1_as.csv")
-robot2_plan = os.path.join(current_directory,"plans","robot2_as.csv")
-robot3_plan = os.path.join(current_directory,"plans","robot3_as.csv")
+# key_direc = "example/warehouse/grid.csv"
+# env_file = "warehouse.usd"
+# plans_direc = "warehouse"
 
-robot1_replans = os.path.join(current_directory,"plans","formatted_robot1.yaml")
-robot2_replans = os.path.join(current_directory,"plans","formatted_robot2.yaml")
-robot3_replans = os.path.join(current_directory,"plans","formatted_robot1.yaml")
+key_path = os.path.normpath(os.path.join(current_directory,key_direc.lstrip("/"))) #File describing the world grid
+usd_path = os.path.join(current_directory,"environments",env_file) #File with the world enfironment
+
+robot1_plan = os.path.join(current_directory,"plans",plans_direc,"robot1_as.csv")
+robot2_plan = os.path.join(current_directory,"plans",plans_direc,"robot2_as.csv")
+robot3_plan = os.path.join(current_directory,"plans",plans_direc,"robot3_as.csv")
+
+robot1_replans = os.path.join(current_directory,"plans",plans_direc,"formatted_robot1.yaml")
+robot2_replans = os.path.join(current_directory,"plans",plans_direc,"formatted_robot2.yaml")
+robot3_replans = os.path.join(current_directory,"plans",plans_direc,"formatted_robot1.yaml")
 
 robot_plans = [robot1_plan, robot2_plan, robot3_plan]
 robot_replans = [load_replans(robot1_replans), load_replans(robot2_replans), load_replans(robot3_replans)]
 
 ## Isaac Sim Paths
 
-quad_path1 = "/World/quads/quad1" #Path to drone in the environment USD
+#Path to drone in the environment USD
+# Small Env
+quad_path1 = "/World/quads/quad1"
 quad_path2 = "/World/quads/quad2"
 quad_path3 = "/World/quads/quad3"
+init_grid_poses = [(0,0),(4,3),(3,2)]
+
+# # Warehouse
+# quad_path1 = "/World/quads/quad1/quad"
+# quad_path2 = "/World/quads/quad2/quad"
+# quad_path3 = "/World/quads/quad3/quad"
+# init_grid_poses = [(2,6),(9,3),(12,12)]
 
 quad_path_list = [quad_path1, quad_path2, quad_path3]
-
-init_grid_poses = [(0,0),(4,3),(3,2)]
 
 ## Define Bumps
 
 bumps = [(3,1),(4,1),(5,2),(5,3),(2,4),(3,4)] #Difficult terrain points as list of ordered pairs: (y,x)
 blocks = [(2,2),(0,4)]
 
+# bumps = [(7,3),(5,2),(5,7),(5,8),(5,9),(1,11),(1,12)] #Difficult terrain points as list of ordered pairs: (y,x)
+# blocks = [(5,0),(7,1),(5,5)]
+
 ## JSON function
 
 json_time = 5
 
 filename_json = "simulation_data.json"
+use_JSONs = False
 
-def generate_json_old(start_time, robots, filename):
+def generate_json_old(start_time, robots, filename, use_JSONs=False):
     data = {
         "simulator time": elapsed_time(start_time),
         "robots": {}
@@ -105,8 +124,9 @@ def generate_json_old(start_time, robots, filename):
     #######################################
     ### Edit these lines to output JSON ###
 
-    with open(filename, "w") as f:
-        f.write(json_output)
+    if use_JSONs:
+        with open(filename, "w") as f:
+            f.write(json_output)
 
     #######################################
 
@@ -116,7 +136,7 @@ def generate_json_old(start_time, robots, filename):
 output_dir = "robot_jsons"
 os.makedirs(output_dir, exist_ok=True)
 
-def generate_json(start_time, robots):
+def generate_json(start_time, robots, use_JSONs=False):
     data = {
         "simulator time": elapsed_time(start_time),
         "robots": {}
@@ -139,11 +159,12 @@ def generate_json(start_time, robots):
     next_index = max(existing_files) + 1 if existing_files else 1
 
     # Save JSON file
-    file_path = os.path.join(output_dir, f"robot_data_{next_index}.json")
-    with open(file_path, "w") as f:
-        f.write(json_output)
+    if use_JSONs:
+        file_path = os.path.join(output_dir, f"robot_data_{next_index}.json")
+        with open(file_path, "w") as f:
+            f.write(json_output)
 
-    print(f"Saved: {file_path}")
+        print(f"Saved: {file_path}")
     return json_output
 
 
@@ -255,7 +276,7 @@ with open(key_path,mode='r')as file:
         if line_count == 0:
             header = lines
         else:
-            key_line = [int(i) for i in lines]
+            key_line = [float(i) for i in lines]
             key[line_count-1] = key_line[1:]
             # print(key_line)
         line_count += 1
@@ -329,24 +350,25 @@ for path in quad_path_list:
     wait_count.append(wait_val)
     replan_count.append(0)
 
-    robot_id = f'robot{quad_count}'
-    # plan = drone_new.getPath()
-    plan = robot_replans[quad_count-1]
-    # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    # print(replan_count[quad_count-1])
-    plan = [init_grid_poses[quad_count-1]] + plan[f"replan{replan_count[quad_count-1]}"]
-    robots_JSON[robot_id] = {
-        "plan": plan,
-        "plan_index": 1,
-        "immediate_goal": plan[1],
-        "x": plan[0][0],
-        "y": plan[0][1],
-        "mission_time": len(plan)-1-1-replan_count[quad_count-1],
-        "replan_flag": False
-    }
+    if use_JSONs:
+        robot_id = f'robot{quad_count}'
+        # plan = drone_new.getPath()
+        plan = robot_replans[quad_count-1]
+        # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        # print(replan_count[quad_count-1])
+        plan = [init_grid_poses[quad_count-1]] + plan[f"replan{replan_count[quad_count-1]}"]
+        robots_JSON[robot_id] = {
+            "plan": plan,
+            "plan_index": 1,
+            "immediate_goal": plan[1],
+            "x": plan[0][0],
+            "y": plan[0][1],
+            "mission_time": len(plan)-1-1-replan_count[quad_count-1],
+            "replan_flag": False
+        }
     quad_count += 1
 # out_json = generate_json_old(start_time, robots_JSON, filename_json)
-out_json = generate_json(start_time, robots_JSON)
+out_json = generate_json(start_time, robots_JSON, use_JSONs)
 
 print("Agents created!")
 
@@ -489,7 +511,7 @@ while rclpy.ok():
 
                     # print_state(drone_obj.name,global_pose,goal,dind,v_curr,goal_reached)
                     
-                    if flags[dind] == 'r':
+                    if flags[dind] == 'r' and use_JSONs:
                         wait_count[drone_count] = 0
                         replan_count[drone_count] += 1
                         
@@ -510,7 +532,7 @@ while rclpy.ok():
 
                         print(f"Replanned robot{drone_count}, replan{replan_count[drone_count]}!")
                         print(robots_JSON[robot_id])
-                        json_output = generate_json(start_time, robots_JSON)
+                        json_output = generate_json(start_time, robots_JSON,use_JSONs)
                         
                     else:
                         drone_obj.dind +=1
@@ -556,21 +578,22 @@ while rclpy.ok():
                     start = not start
 
             quad["info"] = drone_obj
-            robot_id = f'robot{drone_count+1}'
-            # plan = drone_obj.getPath()
-            plan = robot_replans[drone_count]
-            plan = [init_grid_poses[drone_count]] + plan[f"replan{replan_count[drone_count]}"]
-            goal_ind = dind if dind < len(plan) else len(plan)-1
-            curr_ind = goal_ind-1 if goal_ind > 0 else 0
-            robots_JSON[robot_id] = {
-                "plan": plan,
-                "plan_index": goal_ind,
-                "immediate_goal": plan[goal_ind],
-                "x": plan[curr_ind][0],
-                "y": plan[curr_ind][1],
-                "mission_time": len(plan)-goal_ind-1-replan_count[drone_count],
-                "replan_flag": False
-            }
+            if use_JSONs:
+                robot_id = f'robot{drone_count+1}'
+                # plan = drone_obj.getPath()
+                plan = robot_replans[drone_count]
+                plan = [init_grid_poses[drone_count]] + plan[f"replan{replan_count[drone_count]}"]
+                goal_ind = dind if dind < len(plan) else len(plan)-1
+                curr_ind = goal_ind-1 if goal_ind > 0 else 0
+                robots_JSON[robot_id] = {
+                    "plan": plan,
+                    "plan_index": goal_ind,
+                    "immediate_goal": plan[goal_ind],
+                    "x": plan[curr_ind][0],
+                    "y": plan[curr_ind][1],
+                    "mission_time": len(plan)-goal_ind-1-replan_count[drone_count],
+                    "replan_flag": False
+                }
 
             drone_count += 1
 
@@ -581,7 +604,7 @@ while rclpy.ok():
         current_time = time.time()
         if (current_time >= next_print_time and start):
             # json_output = generate_json_old(current_time, robots_JSON, filename_json)
-            json_output = generate_json(start_time, robots_JSON)
+            json_output = generate_json(start_time, robots_JSON, use_JSONs)
             next_print_time += json_time
 
         
