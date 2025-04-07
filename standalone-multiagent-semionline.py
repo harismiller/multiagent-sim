@@ -53,8 +53,9 @@ current_directory = os.getcwd()
 ## File Paths
 
 key_direc = "example/small_environment/grid.csv"
-env_file = "Small_Enviornment-Multiagent.usd"
-plans_direc = "small_environment"
+env_file = "Small_Environment-Multiagent-AllFeasible.usd"
+# plans_direc = "small_environment"
+plans_direc = "small_env_nan"
 
 # key_direc = "example/warehouse/grid.csv"
 # env_file = "warehouse.usd"
@@ -313,7 +314,7 @@ zPID = [kp_z,0,kd_z]
 start_time = time.time()
 next_print_time = start_time + 10
 
-wait_val = 40
+wait_val = 25
 
 start = False
 init_paths = False
@@ -511,28 +512,29 @@ while rclpy.ok():
 
                     # print_state(drone_obj.name,global_pose,goal,dind,v_curr,goal_reached)
                     
-                    if flags[dind] == 'r' and use_JSONs:
+                    if flags[dind] == 'r':
                         wait_count[drone_count] = 0
                         replan_count[drone_count] += 1
                         
-                        robot_id = f'robot{drone_count+1}'
-                        plan = robot_replans[drone_count]
-                        plan = [init_grid_poses[drone_count]] + plan[f"replan{replan_count[drone_count]}"]
-                        goal_ind = dind if dind < len(plan) else len(plan)-1
-                        curr_ind = goal_ind-1 if goal_ind > 0 else 0
-                        robots_JSON[robot_id] = {
-                            "plan": plan,
-                            "plan_index": goal_ind,
-                            "immediate_goal": plan[goal_ind],
-                            "x": plan[curr_ind][0],
-                            "y": plan[curr_ind][1],
-                            "mission_time": len(plan)-goal_ind-1-replan_count[drone_count],
-                            "replan_flag": True
-                        }
+                        if use_JSONs:
+                            robot_id = f'robot{drone_count+1}'
+                            plan = robot_replans[drone_count]
+                            plan = [init_grid_poses[drone_count]] + plan[f"replan{replan_count[drone_count]}"]
+                            goal_ind = dind if dind < len(plan) else len(plan)-1
+                            curr_ind = goal_ind-1 if goal_ind > 0 else 0
+                            robots_JSON[robot_id] = {
+                                "plan": plan,
+                                "plan_index": goal_ind,
+                                "immediate_goal": plan[goal_ind],
+                                "x": plan[curr_ind][0],
+                                "y": plan[curr_ind][1],
+                                "mission_time": len(plan)-goal_ind-1-replan_count[drone_count],
+                                "replan_flag": True
+                            }
 
-                        print(f"Replanned robot{drone_count}, replan{replan_count[drone_count]}!")
-                        print(robots_JSON[robot_id])
-                        json_output = generate_json(start_time, robots_JSON,use_JSONs)
+                            print(f"Replanned robot{drone_count}, replan{replan_count[drone_count]}!")
+                            print(robots_JSON[robot_id])
+                            json_output = generate_json(start_time, robots_JSON,use_JSONs)
                         
                     else:
                         drone_obj.dind +=1

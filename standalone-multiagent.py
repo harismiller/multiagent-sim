@@ -46,7 +46,7 @@ from helper import parse_action_sequence, print_state
 ## File Paths
 
 key_path = "./example/grid.csv" #File describing the world grid
-usd_path = "./environments/Small_Enviornment-Multiagent.usd" #File with the world enfironment
+usd_path = "./environments/Small_Environment-Multiagent.usd" #File with the world enfironment
 
 ## Isaac Sim Paths
 
@@ -241,7 +241,7 @@ for path in quad_path_list:
     quad_new = {
         "info": drone_new,
         "prim": Articulation(drone_new.path, name=drone_new.name),
-        "rb": UsdPhysics.RigidBodyAPI.Get(stage, drone_new.path)
+        "rigidbody": UsdPhysics.RigidBodyAPI.Get(stage, drone_new.path)
     }
     finalgoal_check.append(False)
     init_start.append(False)
@@ -260,19 +260,9 @@ def keyboard_event(event, *args, **kwargs):
     if event.type == carb.input.KeyboardEventType.KEY_PRESS:
         if event.input == carb.input.KeyboardInput.P:
             start = not start
-        # if event.input == carb.input.KeyboardInput.R:
-        #     dind = 0
         if event.input == carb.input.KeyboardInput.X:
             simulation_app.close()
-        # if event.input == carb.input.KeyboardInput.K:
-        #     # print('Key:\n', key)
-        #     x0 = key[x_grid[dind]][1]
-        #     y0 = key[y_grid[dind]][0]
-        #     print('\n')
-        #     print(f'Origin: {y0},{x0}')
-        #     print(dx)
-        #     print(dy)
-        
+                
 ####################################################################################################
 ##### Main Code #####
 
@@ -347,13 +337,6 @@ while rclpy.ok():
             dy = drone_obj.dy
             dz = drone_obj.dz
 
-            # json_data = {
-            #     "robot_name": robot_name,
-            #     "x_coord": current_pose[0],
-            #     "y_coord": current_pose[0],
-            #     "time_step": dind,
-            #     "time_remaining": steps
-            # }
 
             if replan_flag[drone_count]:
                 x_coords, y_coords, z_coords, flags = parse_action_sequence(agent["new_prefix_actions"],bumps)
@@ -367,9 +350,9 @@ while rclpy.ok():
             elif (wait_count[drone_count] < wait_val):
                 wait_count[drone_count] += 1
                 vel = Gf.Vec3f(0,0,0)
-                quad["rb"].GetVelocityAttr().Set(vel)
+                quad["rigidbody"].GetVelocityAttr().Set(vel)
 
-            elif quad["rb"] and dind < len(dx):
+            elif quad["rigidbody"] and dind < len(dx):
 
                 d_curr = [dx[dind],dy[dind],dz[dind]]
                 delx = dx[dind]-global_pose[0]
@@ -396,21 +379,16 @@ while rclpy.ok():
 
                 #     drone_status_sent[drone_count] = True
                 if np.abs(delx) <= 0.5 and np.abs(dely) <= 0.5 and np.abs(delz) <= 0.05:
-                    # vx = 0
-                    # vy = 0
-                    # vz = 0
+
                     drone_obj.dind +=1
-                    # next_grid_pose = (drone_obj.x_grid[drone_obj.dind],drone_obj.y_grid[drone_obj.dind])
-                    # if (next_grid_pose in bumps) or (next_grid_pose in blocks):
-                    #     print(f"********************************* {next_grid_pose} *********************************")
-                    #     print("********************************************************************************")
                     wait_count[drone_count] = 0
                     
                     drone_status.agent = agent["name"]
                     drone_status.arrived = True
                     agent["status_publisher"].publish(drone_status)
+
                 vel = Gf.Vec3f(vx,vy,vz)
-                quad["rb"].GetVelocityAttr().Set(vel)
+                quad["rigidbody"].GetVelocityAttr().Set(vel)
                 # rigid_body_api.GetAngularVelocityAttr().Set(vel)
                 
                 # xpose_prev = xpose
@@ -437,7 +415,7 @@ while rclpy.ok():
                 finalgoal_check[drone_count] = True
 
                 vel = Gf.Vec3f(0,0,0)
-                quad["rb"].GetVelocityAttr().Set(vel)
+                quad["rigidbody"].GetVelocityAttr().Set(vel)
 
             quad["info"] = drone_obj
             drone_count += 1
@@ -449,7 +427,7 @@ while rclpy.ok():
     else:
         vel = Gf.Vec3f(0,0,0)
         for quad in quad_list:
-            quad["rb"].GetVelocityAttr().Set(vel) 
+            quad["rigidbody"].GetVelocityAttr().Set(vel) 
         
 
     world.step(render=True)
