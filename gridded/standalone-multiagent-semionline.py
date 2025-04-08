@@ -62,7 +62,7 @@ plans_direc = "small_env_nan"
 # plans_direc = "warehouse"
 
 key_path = os.path.normpath(os.path.join(current_directory,key_direc.lstrip("/"))) #File describing the world grid
-usd_path = os.path.join(current_directory,"environments",env_file) #File with the world enfironment
+usd_path = os.path.join(current_directory, "..", "environments", env_file) # File with the world environment
 
 robot1_plan = os.path.join(current_directory,"plans",plans_direc,"robot1_as.csv")
 robot2_plan = os.path.join(current_directory,"plans",plans_direc,"robot2_as.csv")
