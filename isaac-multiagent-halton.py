@@ -63,6 +63,10 @@ def main(args, **kwargs):
         input = carb.input.acquire_input_interface()
         input.subscribe_to_keyboard_events(appwindow.get_keyboard(), keyboard_event)
 
+        # print(args.world)
+        # print(args.num_quads)
+        # print(args.num_turtle)
+
         try:
             # Simulate the world
             world.step(render=True)
