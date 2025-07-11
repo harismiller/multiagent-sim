@@ -17,7 +17,7 @@ import os
 
 import rclpy
 from rclpy.node import Node
-from interfaces_hmm_sim.msg import AgentPoses, Status
+from interfaces_hmm_sim.msg import AgentPoses, Status, PathPlan, ReplanStatus, AgentGoTo
 from ltl_automaton_msgs.msg import TransitionSystemState, TransitionSystemStateStamped, LTLPlan, RelayResponse
 
 class NumAgentsAction(argparse.Action):
@@ -243,6 +243,11 @@ if __name__ == "__main__":
         agent_node["suffix_actions"] = msg.action_sequence
         agent_node["node"].get_logger().info(f"Received suffix plan actions")
 
+    def next_step_callback(msg, agent_node):
+        agent_node["next_step"] = msg.next_step
+        agent_node["next_flag"] = msg.next_flag
+        agent_node["node"].get_logger().info(f"Received next step command")
+
     # Create agent nodes
     def create_agent_nodes(num_agents):
         agent_nodes = []
@@ -272,6 +277,8 @@ if __name__ == "__main__":
                 "new_suffix_actions": [],
                 "prefix_actions": [],
                 "suffix_actions": [],
+                "next_step": [],
+                "next_flag": 'i',
             }
 
             # Closures to bind agent-specific data
@@ -295,9 +302,17 @@ if __name__ == "__main__":
                 LTLPlan, f"{namespace}/suffix_plan", suffix_callback, 10
             )
 
+            next_step_subscriber = node.create_subscription(
+                AgentGoTo,
+                f"{namespace}/agent_next",
+                lambda msg, agent_node=agent_node: next_step_callback(msg, agent_node),
+                10
+            )
+
             agent_node["relay_response_subscriber"] = relay_response_subscriber
             agent_node["prefix_plan_subscriber"] = prefix_plan_subscriber
             agent_node["suffix_plan_subscriber"] = suffix_plan_subscriber
+            agent_node["next_step_subscriber"] = next_step_subscriber
 
             agent_nodes.append(agent_node)
 
@@ -325,6 +340,12 @@ if __name__ == "__main__":
                 if label:
                     labelled_points[label] = (x, y)
 
+    x_max = np.ceil(max(point[0] for point in halton_points))
+    y_max = np.ceil(max(point[1] for point in halton_points))
+
+    x_offset = x_max / 2
+    y_offset = y_max / 2
+
     # print("Parsed Halton Points:", halton_points)
     # print("Label-to-Point Mapping:", label_to_point)
 
@@ -337,7 +358,7 @@ if __name__ == "__main__":
     ##### Drone Controller Parameters #####
 
     ## Simple PID Gains
-    kp = 6
+    kp = 9
     kp_z = 3
     kd = 2
     kd_z = 0.5
@@ -358,25 +379,28 @@ if __name__ == "__main__":
     dc=_dynamic_control.acquire_dynamic_control_interface()
 
     ## Create drone object
-    quad_list = []
+    robot_list = []
     finalgoal_check = []
     init_start = []
     wait_count = []
-    quad_count = 1
+    stay_flag = []
+    robot_count = 1
     for agent in agents:
-        drone_new = drone.Drone(agent["id"],agent["path"],PID,zPID)
-        # drone_new.setPath(x_grid_list[quad_count-1],y_grid_list[quad_count-1],dz_list[quad_count-1],key)
+        drone_new = drone.Drone(agent["id"],agent["path"],agent["type"],PID,zPID,environment_scale,x_offset)
+        # drone_new.setPath(x_grid_list[robot_count-1],y_grid_list[robot_count-1],dz_list[robot_count-1],key)
+        drone_new.setNext(agent["initial_position"][0], agent["initial_position"][1], 0.0, 'i')
 
-        quad_new = {
+        robot_new = {
             "info": drone_new,
             "prim": Articulation(drone_new.path, name=drone_new.name),
             "rigidbody": UsdPhysics.RigidBodyAPI.Get(stage, drone_new.path)
         }
         finalgoal_check.append(False)
         init_start.append(False)
-        quad_list.append(quad_new)
+        robot_list.append(robot_new)
         wait_count.append(wait_val)
-        quad_count += 1
+        stay_flag.append(False)
+        robot_count += 1
 
     ####################################################################################################
     ##### Execution #####
@@ -392,14 +416,120 @@ if __name__ == "__main__":
         input = carb.input.acquire_input_interface()
         input.subscribe_to_keyboard_events(appwindow.get_keyboard(), keyboard_event)
         
-        for agent in agent_nodes:
-            drone_status = Status()
-            drone_status.agent = agent["name"]
-            drone_status.replan_received = True
-            agent["status_publisher"].publish(drone_status)
+        if start:
+            if not init_paths:
+                for agent in agent_nodes:
+                    num = agent["number"]
+                    if agent["next_flag"] == 'i':
+                        init_status = Status()
+                        init_status.agent = agent["name"]
+                        init_status.start = True
+                        agent["status_publisher"].publish(init_status)
+                    else:
+                        init_start[num] = True
+                        init_x = agent["next_step"][0]
+                        init_y = agent["next_step"][1]
+                        # print(f"Agent {num} - Type: {agents[num]['type']})")
+                        if agents[num]["type"] == "quad":
+                            init_z = 3.0
+                        else:
+                            init_z = 0.0
+                        init_flag = agent["next_flag"]
+                        robot_list[num]["info"].setNext(init_x, init_y, init_z, init_flag)
+
+
+        if (np.all(np.array(init_start))):
+            init_paths = True   
         # print(args.world)
         # print(args.num_quads)
         # print(args.num_turtle)
+
+        if start and init_paths:
+            for agent in agent_nodes:
+                num = agent["number"]
+                next_x = agent["next_step"][0]
+                next_y = agent["next_step"][1]
+                next_flag = agent["next_flag"]
+                # print(f"Agent {num} - Type: {agents[num]['type']})")
+                if agents[num]["type"] == "quad":
+                    if next_flag == 'g':
+                        next_z = 3.0
+                    elif next_flag == 'l' or next_flag == 'u':
+                        next_z = 2.0
+                    elif next_flag == 's':
+                        next_z = 1.0
+                    elif next_flag == 'b':
+                        next_z = 0.0
+                robot_list[num]["info"].setNext(next_x, next_y, next_z, next_flag)
+                robot_obj = robot_list[num]["info"]
+
+                robot_status = Status()
+
+                object = dc.get_rigid_body(robot_obj.path)
+                object_pose=dc.get_rigid_body_pose(object)
+                global_pose,global_orient = robot_list[num]["prim"].get_world_pose()
+                robot_rb = robot_list[num]["rigidbody"]
+
+                xpose = global_pose[0]
+                ypose = global_pose[1]
+                zpose = global_pose[2]
+
+                robot_obj.pose = [xpose,ypose,zpose]
+                pose_prev = robot_obj.pose_prev
+                del_prev = robot_obj.del_prev
+
+                xgoal = robot_obj.xgoal
+                ygoal = robot_obj.ygoal
+                zgoal = robot_obj.zgoal
+                flag = robot_obj.flag
+
+                # print(f"Agent {num} - Current Pose: {robot_obj.pose}, Goal: ({xgoal}, {ygoal}, {zgoal}), Flag: {flag}")
+                if robot_rb and not stay_flag[num]:
+                    delx = xgoal - xpose
+                    dely = ygoal - ypose
+                    delz = zgoal - zpose
+
+                    kp_mod = kp
+                    if delz > 0.5:
+                        kp_mod = 0.25*kp
+                    elif delz < -0.5 and (np.abs(delx) < 0.5 and np.abs(dely) < 0.5):
+                        kp_mod = 0.25*kp
+                    vx = kp_mod*delx + kd*(delx - del_prev[0])
+                    vy = kp_mod*dely + kd*(dely - del_prev[1])
+                    vz = kp_z*(delz) + kd_z*(delz - del_prev[2])
+                    v_curr = [vx,vy,vz]
+
+                    if np.abs(delx) <= 0.5 and np.abs(dely) <= 0.5 and np.abs(delz) <= 0.05:
+                        print(f"Agent {num} - Flag:  {flag}")
+                        if flag == 's' and not stay_flag[num]:
+                            stay_flag[num] = True
+                            robot_status.agent = agent["name"]
+                            robot_status.arrived = True
+                            agent["status_publisher"].publish(robot_status)
+                        elif flag == 'b' and not stay_flag[num]:
+                            stay_flag[num] = True
+                            robot_status.agent = agent["name"]
+                            robot_status.arrived = True
+                            agent["status_publisher"].publish(robot_status)
+                        elif flag != 's' or flag != 'b':
+                            robot_status.agent = agent["name"]
+                            robot_status.arrived = True
+                            agent["status_publisher"].publish(robot_status)
+
+                    vel = Gf.Vec3f(vx,vy,vz)
+                    robot_rb.GetVelocityAttr().Set(vel)
+                    if np.all(np.array(finalgoal_check)):
+                        print("All goals reach!")
+                        start = not start
+                else:
+                    finalgoal_check[num] = True
+
+                    vel = Gf.Vec3f(0,0,0)
+                    robot_rb.GetVelocityAttr().Set(vel)
+        else:
+            vel = Gf.Vec3f(0,0,0)
+            for robot in robot_list:
+                robot["rigidbody"].GetVelocityAttr().Set(vel)
 
         try:
             # Simulate the world

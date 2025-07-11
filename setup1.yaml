@@ -1,0 +1,11 @@
+files:
+    - halton: halton_points.csv
+    - environment: Halton_env.usd
+setup:
+    - num_quads: 1
+    - num_turtle: 0
+    - environment_scale: 4.0
+agents:
+    - id: 1
+      type: quad
+      initial_position: [0, 0, 0]

@@ -2,13 +2,19 @@ import numpy as np
 
 class Drone:
     def __init__(self, name: str, 
-                 path: str, 
+                 path: str,
+                 agent_type: str, 
                  PID: list = [1,0,0], 
                  zPID: list = [1,0,0],
+                 scale: float = 1.0,
+                 offset: float = 0.0,
                  state: int = 0) -> None:
                  
         self.name = name
         self.path = path
+        self.scale = scale
+        self.offset = offset
+        self.agent_type = agent_type
 
         # PID
         self.PID = PID
@@ -23,32 +29,26 @@ class Drone:
         self.del_prev = [0,0,0]
         self.pose = [0,0,0]
 
+        self.xgoal = 0
+        self.ygoal = 0 
+        self.zgoal = 0
+        self.flag = 'i'
+        self.angle = 0
+
         self.dind = 0
 
         # Path planning input type
         self.state = state
         self.dind = 0
-        self.dy = []
-        self.dx = []
-        self.dz = []
-        self.flags = []
-
-        self.y_grid = []
-        self.x_grid = []
-
-    def setPath(self, x_grid: list, y_grid: list, dz:list, flags:list, key) -> None:
-        self.y_grid = y_grid
-        self.x_grid = x_grid
-
-        self.dy = [key[i][0] for i in y_grid]
-        self.dx = [key[i][1] for i in x_grid]
-        self.dz = dz
-        self.flags = flags
     
-    def getPath(self):
-        x_values = self.x_grid
-        y_values = self.y_grid
-        return [[x, y] for x, y in zip(x_values, y_values)]
+    def setNext(self, x:float, y:float, z:float, flag:str) -> None:
+        self.xgoal = (x-self.offset)*self.scale
+        self.ygoal = (y-self.offset)*self.scale
+        self.zgoal = 0.0 if self.agent_type == "turtle" else z
+        self.flag = flag
+
+    def getNext(self) -> list:
+        return [self.xgoal, self.ygoal, self.zgoal, self.flag]
 
     def setPID(self, PID: list, zPID: list) -> None:
         self.PID = PID

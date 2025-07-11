@@ -2,18 +2,18 @@ files:
     - halton: halton_points.csv
     - environment: Halton_env.usd
 setup:
-    - num_quads: 4
-    - num_turtle: 0
+    - num_quads: 2
+    - num_turtle: 2
     - environment_scale: 4.0
 agents:
     - id: 1
       type: quad
       initial_position: [0, 0, 0]
     - id: 2
-      type: quad
+      type: turtle
       initial_position: [1, 1, 0]
     - id: 3
-      type: quad
+      type: turtle
       initial_position: [2, 2, 0]
     - id: 4
       type: quad
