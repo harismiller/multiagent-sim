@@ -72,4 +72,4 @@ The following keyboard inputs can be used once the simulation window has been fu
 * X - Close the sim
 
 ## Contact
-For any questions or comments, please contact  Haris Miller (harismiller@gatech.edu).
+For any questions or comments, please contact  Haris Miller (hhmille@sandia.gov).
